@@ -4,9 +4,6 @@ import requests
 import altair as alt
 from datetime import date
 
-# ------------------------
-# Streamlit Page Config
-# ------------------------
 st.set_page_config(
     page_title="NERIS Daily Incident Analysis",
     page_icon="📅",
@@ -14,9 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ------------------------
-# Custom Styling
-# ------------------------
 def load_css():
     """Injects custom CSS to style the dashboard with a NERIS-branded light theme."""
     st.markdown("""
@@ -37,16 +31,27 @@ def load_css():
             [data-testid="stSidebar"] {
                 background-color: var(--secondary-bg);
             }
-            h1, h2, h3 { color: var(--text-color); }
-            p, .st-emotion-cache-1qg05j4, [data-testid="stMarkdownContainer"] { color: var(--text-color); }
-            [data-testid="stMetricValue"] { color: var(--text-color); }
-            .stDataFrame { border: 1px solid #E0E0E0; border-radius: 8px; }
+            h1, h2, h3 { 
+                color: var(--text-color); 
+            }
+            p, .st-emotion-cache-1qg05j4, [data-testid="stMarkdownContainer"] { 
+                color: var(--text-color); 
+            }
+            [data-testid="stMetricValue"] { 
+                color: var(--text-color); 
+            }
+            .stDataFrame { 
+                border: 1px solid #E0E0E0; border-radius: 8px; 
+            }
+            [data-testid="stSidebarNav"] ul li a {
+                background-color: #000000;
+            }
+            [data-testid="stSidebarNav"] ul li a:hover {
+                background-color: #2f333b;
+            }
         </style>
     """, unsafe_allow_html=True)
 
-# ------------------------
-# Data Handling
-# ------------------------
 @st.cache_data
 def load_data(path: str) -> pd.DataFrame:
     """
@@ -65,9 +70,6 @@ def load_data(path: str) -> pd.DataFrame:
     df['date'] = df['alarm_datetime'].dt.date
     return df
 
-# ------------------------
-# API & UI Functions
-# ------------------------
 @st.cache_data
 def get_weather_for_day(lat: float, lon: float, day: date, api_key: str) -> dict | None:
     """
@@ -77,14 +79,14 @@ def get_weather_for_day(lat: float, lon: float, day: date, api_key: str) -> dict
     url = f"https://api.openweathermap.org/data/3.0/onecall/day_summary?lat={lat}&lon={lon}&date={day.strftime('%Y-%m-%d')}&appid={api_key}&units=metric"
     try:
         response = requests.get(url)
-        response.raise_for_status() # Will raise an exception for 4xx/5xx errors
+        response.raise_for_status()
         data = response.json()
         return {
             'max_temp_c': data.get('temperature', {}).get('max'),
             'total_precipitation_mm': data.get('precipitation', {}).get('total'),
         }
     except requests.RequestException:
-        # Return None instead of calling st.error here to avoid flooding the UI
+
         return None
 
 def render_top_days_analysis(df: pd.DataFrame):
@@ -122,14 +124,13 @@ def render_weather_correlation(df: pd.DataFrame, top_10_df: pd.DataFrame, api_ke
         progress_bar.progress((i + 1) / len(top_10_df), text=f"Fetching weather for {row.date.strftime('%Y-%m-%d')}...")
     
     progress_bar.empty()
-    
-    # If all requests failed, show a clear warning and stop.
+
     if failed_requests == len(top_10_df):
         st.warning("Could not fetch weather data. Please check your OpenWeatherMap API key and ensure your subscription plan includes access to the 'One Call API 3.0' for historical data.", icon="🔑")
         return
 
     weather_df = pd.DataFrame(weather_data)
-    # Filter the original top_10_df to only include days where weather was successfully fetched
+
     successful_days_df = top_10_df.iloc[:-failed_requests if failed_requests > 0 else len(top_10_df)].reset_index()
     correlation_df = pd.concat([successful_days_df, weather_df], axis=1)
 
@@ -159,7 +160,6 @@ def render_daily_details(df: pd.DataFrame, selected_day: date):
         st.warning("No data available for the selected day.")
         return
 
-    # Key Metrics
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Incidents", f"{len(day_df):,}")
     busiest_hour = day_df['alarm_datetime'].dt.hour.value_counts().idxmax()
@@ -168,8 +168,7 @@ def render_daily_details(df: pd.DataFrame, selected_day: date):
     col3.metric("Most Common Incident", top_incident)
     
     st.divider()
-    
-    # Full data table
+
     st.subheader("All Incidents on This Day")
     display_cols = ['alarm_datetime', 'incident_description', 'city', 'state', 'response_time_minutes']
     st.dataframe(
@@ -184,9 +183,6 @@ def render_daily_details(df: pd.DataFrame, selected_day: date):
         hide_index=True
     )
 
-# ------------------------
-# Main Application
-# ------------------------
 def main():
     """Main function to orchestrate the dashboard's creation and logic."""
     load_css()
