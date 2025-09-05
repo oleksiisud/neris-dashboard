@@ -1,6 +1,6 @@
---no-use-pep517 pyarrow
 streamlit
 pandas
+pyarrow
 pydeck
 streamlit-dynamic-filters
 global-land-mask
