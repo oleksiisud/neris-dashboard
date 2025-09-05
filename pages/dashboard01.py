@@ -14,7 +14,7 @@ st.set_page_config(
 
 @st.cache_data
 def load_data(path):
-    """
+    '''
     Loads, cleans, and transforms the raw NERIS incident data from a CSV file.
 
     This function is cached to prevent reloading data on every user interaction.
@@ -31,7 +31,7 @@ def load_data(path):
 
     Returns:
         pd.DataFrame: The cleaned and transformed DataFrame.
-    """
+    '''
     df = pd.read_csv(path)
     original_rows = len(df)
 
@@ -43,7 +43,7 @@ def load_data(path):
 
     parsing_errors = original_rows - len(df)
     if parsing_errors > 0:
-        st.warning(f"⚠️ Found and removed {parsing_errors} rows with invalid/missing data.")
+        st.warning(f'⚠️ Found and removed {parsing_errors} rows with invalid/missing data.')
 
     if not df.empty:
         df['on_land'] = globe.is_land(df['latitude'], df['longitude'])
@@ -59,9 +59,9 @@ def load_data(path):
 
 
 def apply_filters(df, start_date, end_date, location_type, selected_incident):
-    """
+    '''
     Applies a series of filters to the DataFrame based on user input.
-    """
+    '''
     filtered = df[
         (df['alarm_datetime'].dt.date >= start_date) &
         (df['alarm_datetime'].dt.date <= end_date)
@@ -82,59 +82,57 @@ def render_dashboard(df):
     """
     Sets up the Streamlit UI and renders the dashboard components.
     """
-    st.title('3D Map of NERIS Incident Density 🗺️')
+    st.title('🗺️ NERIS Incident Density Dashboard ')
 
     if df.empty:
         st.error('🚨 No valid data to display after cleaning. Please check the source file.')
         return
 
-    # --- Sidebar for Filter Widgets ---
     with st.sidebar:
-        st.image('https://www.usfa.fema.gov/img/logos/neris.svg')
+        st.sidebar.image('https://www.usfa.fema.gov/img/logos/neris.svg')
         st.header('🔍 Data Filters')
 
         st.subheader('Time Filter')
         min_date = df['alarm_datetime'].min().date()
         max_date = df['alarm_datetime'].max().date()
-        start_date = st.date_input("Start Date", min_date, min_value=min_date, max_value=max_date)
-        end_date = st.date_input("End Date", max_date, min_value=min_date, max_value=max_date)
+        start_date = st.date_input('Start Date', min_date, min_value=min_date, max_value=max_date)
+        end_date = st.date_input('End Date', max_date, min_value=min_date, max_value=max_date)
         if start_date > end_date:
-            st.error("Error: End date must be after start date.")
+            st.error('Error: End date must be after start date.')
 
-        st.subheader("Location Type")
-        location_type = st.radio("Show incidents on:", ('All', 'Land Only', 'Water Only'))
+        st.subheader('Location Type')
+        location_type = st.radio('Show incidents on:', ('All', 'Land Only', 'Water Only'))
 
-        st.subheader("Map Style")
+        st.subheader('Map Style')
         transparency_level = st.slider(
-            "Transparency Threshold (%)", 0, 100, 0,
-            help="Hexagons with incident counts below this percentage of the maximum will be translucent."
+            'Transparency Threshold (%)', 0, 100, 0,
+            help='Hexagons with incident counts below this percentage of the maximum will be translucent.'
         )
 
-    # --- Main Processing Block ---
     with st.spinner('Processing data and updating visuals...'):
 
         base_filtered_df = apply_filters(df, start_date, end_date, location_type, 'All')
 
         with st.sidebar:
-            st.subheader("Incident Filter")
+            st.subheader('Incident Filter')
             if not base_filtered_df.empty:
                 incident_options = ['All'] + sorted(base_filtered_df['Specific Incident Type'].unique())
-                selected_incident = st.selectbox("Specific Incident Type", options=incident_options)
+                selected_incident = st.selectbox('Specific Incident Type', options=incident_options)
                 incident_filtered_df = apply_filters(df, start_date, end_date, location_type, selected_incident)
             else:
-                st.selectbox("Specific Incident Type", options=['No data'], disabled=True)
+                st.selectbox('Specific Incident Type', options=['No data'], disabled=True)
                 incident_filtered_df = base_filtered_df
 
         if not incident_filtered_df.empty:
             with st.sidebar:
-                st.subheader("Geographic Filters")
+                st.subheader('Geographic Filters')
                 dynamic_filters = DynamicFilters(incident_filtered_df, filters=['state', 'city'])
                 dynamic_filters.display_filters(location='sidebar')
             filtered_df = dynamic_filters.filter_df()
         else:
             filtered_df = incident_filtered_df
 
-        st.metric("Filtered Incidents", f"{len(filtered_df):,}")
+        st.metric('Filtered Incidents', f'{len(filtered_df):,}')
 
         opaque_colors = [
             [224, 231, 255], [199, 210, 254], [165, 180, 252],
@@ -158,25 +156,25 @@ def render_dashboard(df):
                         radius=750, elevation_scale=10, elevation_range=[0, 1000],
                         pickable=True, extruded=True, color_range=dynamic_color_range
                     )],
-                    tooltip={"html": "<b>Incident Count:</b> {elevationValue}"}
+                    tooltip={'html': '<b>Incident Count:</b> {elevationValue}'}
                 ))
             else:
-                st.warning("No data available for the selected filters.")
+                st.warning('No data available for the selected filters.')
 
         with col2:
-            st.subheader("Incidents by Hour of Day")
+            st.subheader('Incidents by Hour of Day')
             if not filtered_df.empty:
                 hourly_counts = filtered_df['alarm_datetime'].dt.hour.value_counts().sort_index()
-                st.bar_chart(hourly_counts, color="#ef4444")
+                st.bar_chart(hourly_counts, color='#ef4444')
             else:
-                st.write("No incident data to plot.")
+                st.write('No incident data to plot.')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         initial_df = load_data('data/NERIS_COMPLETE_INCIDENTS.csv')
         render_dashboard(initial_df)
     except FileNotFoundError:
-        st.error("❌ Data file not found. Make sure `NERIS_COMPLETE_INCIDENTS.csv` is in a `data/` subfolder.")
+        st.error('❌ Data file not found. Make sure `NERIS_COMPLETE_INCIDENTS.csv` is in a `data/` subfolder.')
     except Exception as e:
-        st.error(f"An unexpected error occurred: {e}")
+        st.error(f'An unexpected error occurred: {e}')
