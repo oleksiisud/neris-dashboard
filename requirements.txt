@@ -1,6 +1,6 @@
 streamlit
 pandas
-pyarrow==15.0.0
+pyarrow==14.0.1
 pydeck
 streamlit-dynamic-filters
 global-land-mask
