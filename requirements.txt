@@ -1,3 +1,4 @@
+--no-use-pep517 pyarrow
 streamlit
 pandas
 pydeck
