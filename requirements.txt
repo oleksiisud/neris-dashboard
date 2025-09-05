@@ -1,0 +1,9 @@
+streamlit
+pandas
+pydeck
+streamlit-dynamic-filters
+global-land-mask
+streamlit-keplergl
+altair
+datetime
+streamlit-extras
