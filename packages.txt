@@ -1,4 +1,2 @@
 build-essential
-libarrow-dev
-libparquet-dev
 cmake
