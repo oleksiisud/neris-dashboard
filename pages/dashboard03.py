@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-# from keplergl import KeplerGl
-# from streamlit_keplergl import keplergl_static
+import pydeck as pdk  # Changed from keplergl
 from datetime import date
 from global_land_mask import globe
 
@@ -28,7 +27,7 @@ def load_css():
             [data-testid='stAppViewContainer'] {
                 background-color: var(--primary-bg);
             }
-             .main .block-container, .main {
+              .main .block-container, .main {
                 background-color: var(--primary-bg);
                 color: var(--text-color);
             }
@@ -38,7 +37,7 @@ def load_css():
             h1, h2, h3 {
                 color: var(--text-color);
             }
-             p, .st-emotion-cache-1qg05j4, [data-testid='stMarkdownContainer'] {
+              p, .st-emotion-cache-1qg05j4, [data-testid='stMarkdownContainer'] {
                 color: var(--text-color);
             }
 
@@ -133,7 +132,7 @@ def main():
         st.header('Filters')
         min_date = df['alarm_datetime'].min().date()
         max_date = df['alarm_datetime'].max().date()
-        date_range = st.date_input('Select date range', value=(min_date, max_date), min_value=min_date,
+        date_range = st.date_input('Select date range (min date: 2020/09/03, max date: 2025/09/02)', value=(date(2022, 9, 1), date(2022, 11, 30)), min_value=min_date,
                                    max_value=max_date)
 
         if len(date_range) != 2:
@@ -147,7 +146,7 @@ def main():
                                                default=incident_descriptions[:5])
         states = sorted(df['state'].unique())
         selected_state = st.selectbox('State', ['ALL STATES'] + states)
-        location_type = st.radio('Location Type', ('All', 'Land Only', 'Water Only'))
+        location_type = st.radio('Location Type', ('All', 'Land Only', 'Water Only'), index=1)
 
     start_date_ts = pd.Timestamp(start_date).tz_localize('UTC')
     end_date_ts = pd.Timestamp(end_date).tz_localize('UTC') + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
@@ -171,39 +170,39 @@ def main():
     with col1:
         st.subheader('Incident Map')
 
-        map_config = {}
         if not filtered_df.empty:
-            center_lat = filtered_df['latitude'].mean()
-            center_lon = filtered_df['longitude'].mean()
-
-            map_config = {
-                'version': 'v1',
-                'config': {
-                    'mapState': {'latitude': center_lat, 'longitude': center_lon, 'zoom': 8},
-                    'visState': {
-                        'layers': [{
-                            'type': 'point',
-                            'config': {
-                                'dataId': 'incidents',
-                                'label': 'Incidents by Response Time',
-                                'color': [227, 28, 61],
-                                'columns': {'lat': 'latitude', 'lng': 'longitude'},
-                                'isVisible': True,
-                                'visConfig': {
-                                    'radiusRange': [10, 500]
-                                },
-                                'visualChannels': {
-                                    'sizeField': {'name': 'response_time_minutes', 'type': 'real'},
-                                    'sizeScale': 'sqrt'
-                                }
-                            }
-                        }]
-                    }
+            view_state = pdk.ViewState(
+                latitude=filtered_df['latitude'].mean(),
+                longitude=filtered_df['longitude'].mean(),
+                zoom=10,
+                pitch=0
+            )
+            layer = pdk.Layer(
+                'ScatterplotLayer',
+                data=filtered_df,
+                get_position='[longitude, latitude]',
+                get_color='[227, 28, 61, 160]',
+                get_radius='response_time_minutes * 20',  
+                pickable=True,
+                auto_highlight=True
+            )
+            tooltip = {
+                'html': '<b>Incident:</b> {incident_description}<br>'
+                        '<b>Response Time:</b> {response_time_minutes} minutes',
+                'style': {
+                    'backgroundColor': '#002855',
+                    'color': 'white'
                 }
             }
+            r = pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip=tooltip
+            )
+            st.pydeck_chart(r)
+        else:
+            st.info("No incidents to display on the map for the selected filters.")
 
-#        map_ = KeplerGl(height=600, data={'incidents': filtered_df}, config=map_config)
-#        keplergl_static(map_)
 
     with col2:
         st.subheader('Summary Stats')
@@ -258,4 +257,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
