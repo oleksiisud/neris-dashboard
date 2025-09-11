@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-from keplergl import KeplerGl
-from streamlit_keplergl import keplergl_static
+# from keplergl import KeplerGl
+# from streamlit_keplergl import keplergl_static
 from datetime import date
 from global_land_mask import globe
 
@@ -202,8 +202,8 @@ def main():
                 }
             }
 
-        map_ = KeplerGl(height=600, data={'incidents': filtered_df}, config=map_config)
-        keplergl_static(map_)
+#        map_ = KeplerGl(height=600, data={'incidents': filtered_df}, config=map_config)
+#        keplergl_static(map_)
 
     with col2:
         st.subheader('Summary Stats')
